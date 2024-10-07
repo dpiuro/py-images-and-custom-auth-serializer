@@ -1,10 +1,12 @@
 from datetime import datetime
 
 from django.db.models import F, Count
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, views, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from cinema.models import Genre, Actor, CinemaHall, Movie, MovieSession, Order
@@ -175,15 +177,31 @@ class OrderViewSet(
         serializer.save(user=self.request.user)
 
 
-@action(
-        methods=["post"],
-        detail=True,
-        permission_classes=[IsAdminUser],
-        url_path="upload-image",
-    )
-    def upload_image(self, request, pk=None):
-        movie = self.get_object()
-        serializer = self.get_serializer(movie, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+class MovieImageUploadView(views.APIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser,)
+
+    def post(self, request, pk=None):
+        try:
+            movie = Movie.objects.get(pk=pk)
+        except Movie.DoesNotExist:
+            return Response(
+                {"detail": "Movie not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        image_file = request.FILES.get("image")
+        if not image_file:
+            return Response(
+                {"detail": "No valid image provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        movie.image = image_file
+        movie.save()
+
+        return Response(
+            {"image": movie.image.url},
+            status=status.HTTP_200_OK
+        )
