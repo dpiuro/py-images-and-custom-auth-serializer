@@ -7,8 +7,10 @@ from cinema.views import (
     CinemaHallViewSet,
     MovieViewSet,
     MovieSessionViewSet,
-    OrderViewSet, MovieImageUploadView,
+    OrderViewSet,
+    MovieImageUploadView,
 )
+
 
 router = routers.DefaultRouter()
 router.register("genres", GenreViewSet)

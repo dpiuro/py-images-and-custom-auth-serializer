@@ -46,9 +46,10 @@ class Movie(models.Model):
     genres = models.ManyToManyField("Genre")
     actors = models.ManyToManyField("Actor")
 
-    def movie_image_path(self, filename):
+    @staticmethod
+    def movie_image_path(instance, filename):
         ext = filename.split(".")[-1]
-        filename = f"{slugify(self.title)}-{uuid.uuid4()}.{ext}"
+        filename = f"{slugify(instance.title)}-{uuid.uuid4()}.{ext}"
         return os.path.join("uploads/movies/", filename)
 
     image = models.ImageField(
