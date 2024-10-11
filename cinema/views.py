@@ -3,6 +3,7 @@ from datetime import datetime
 from django.db.models import F, Count
 from rest_framework import viewsets, mixins, views, status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -105,6 +106,29 @@ class MovieViewSet(
 
         return MovieSerializer
 
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated]
+    )
+    def upload_image(self, request, pk=None):
+        movie = self.get_object()
+        image_file = request.FILES.get("image")
+
+        if not image_file:
+            return Response(
+                {"detail": "No valid image provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        movie.image = image_file
+        movie.save()
+
+        return Response(
+            {"image": movie.image.url},
+            status=status.HTTP_200_OK
+        )
+
 
 class MovieSessionViewSet(viewsets.ModelViewSet):
     queryset = (
@@ -175,33 +199,3 @@ class OrderViewSet(
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-
-
-class MovieImageUploadView(views.APIView):
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    parser_classes = (MultiPartParser,)
-
-    def post(self, request, pk=None):
-        try:
-            movie = Movie.objects.get(pk=pk)
-        except Movie.DoesNotExist:
-            return Response(
-                {"detail": "Movie not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        image_file = request.FILES.get("image")
-        if not image_file:
-            return Response(
-                {"detail": "No valid image provided."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        movie.image = image_file
-        movie.save()
-
-        return Response(
-            {"image": movie.image.url},
-            status=status.HTTP_200_OK
-        )
